@@ -24,14 +24,14 @@ function shiftCenter(dx,dy,baseLat,baseLon){const world=project(baseLat,baseLon,
 function pointerDistance(){const a=[...touches.values()];return Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y);}
 map.addEventListener('pointerdown',e=>{if(e.target.closest('button,a,.pinpopup'))return;touches.set(e.pointerId,{x:e.clientX,y:e.clientY});try{map.setPointerCapture(e.pointerId)}catch(_){}
 if(touches.size===1){dragStart={id:e.pointerId,x:e.clientX,y:e.clientY,lat:centerLat,lon:centerLon};pinchStart=null;}
-else if(touches.size===2){dragStart=null;pinchStart={distance:pointerDistance(),zoom,lat:centerLat,lon:centerLon};}
+else if(touches.size===2){dragStart=null;pinchStart={distance:pointerDistance(),zoom,lat:centerLat,lon:centerLon,ratio:1};}
 });
 map.addEventListener('pointermove',e=>{if(!touches.has(e.pointerId))return;touches.set(e.pointerId,{x:e.clientX,y:e.clientY});
-if(touches.size===2&&pinchStart){const ratio=pointerDistance()/Math.max(1,pinchStart.distance);const target=Math.max(0,Math.min(15,Math.round(pinchStart.zoom+Math.log2(Math.max(.1,ratio)))));if(target!==zoom){zoom=target;renderMap();}return;}
+if(touches.size===2&&pinchStart){const ratio=Math.max(.25,Math.min(4,pointerDistance()/Math.max(1,pinchStart.distance)));pinchStart.ratio=ratio;if(mapLayer){mapLayer.style.transformOrigin='50% 50%';mapLayer.style.transform='scale('+ratio+')';}return;}
 if(!dragStart||dragStart.id!==e.pointerId||!mapLayer)return;const dx=e.clientX-dragStart.x,dy=e.clientY-dragStart.y;mapLayer.style.transform='translate3d('+dx+'px,'+dy+'px,0)';
 });
 function finishPointer(e){if(!touches.has(e.pointerId))return;if(dragStart&&dragStart.id===e.pointerId){shiftCenter(e.clientX-dragStart.x,e.clientY-dragStart.y,dragStart.lat,dragStart.lon);renderMap();}
-touches.delete(e.pointerId);dragStart=null;if(touches.size<2)pinchStart=null;if(touches.size===1){const [id,p]=[...touches.entries()][0];dragStart={id,x:p.x,y:p.y,lat:centerLat,lon:centerLon};}}
+if(pinchStart&&touches.size===2){zoom=Math.max(0,Math.min(15,Math.round(pinchStart.zoom+Math.log2(pinchStart.ratio||1))));pinchStart=null;renderMap();}touches.delete(e.pointerId);dragStart=null;if(touches.size<2)pinchStart=null;if(touches.size===1){const [id,p]=[...touches.entries()][0];dragStart={id,x:p.x,y:p.y,lat:centerLat,lon:centerLon};}}
 map.addEventListener('pointerup',finishPointer);
 map.addEventListener('pointercancel',e=>{touches.delete(e.pointerId);dragStart=null;pinchStart=null;renderMap();});
 map.addEventListener('wheel',e=>{e.preventDefault();const next=Math.max(0,Math.min(15,zoom+(e.deltaY<0?1:-1)));if(next!==zoom){zoom=next;renderMap();}},{passive:false});
